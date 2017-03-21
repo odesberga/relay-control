@@ -1,7 +1,28 @@
+#include <Arduino.h>
+
 #include <SoftwareSerial.h>
 int ports[16]={2,3,4,5,6,7,8,9,14,15,16,17,18,19,13,10};
 SoftwareSerial extSerial(11, 12);
 String rs;
+char serbuf[250];
+//char rulebuf[62];
+struct msg
+{
+  char inbus[3];
+  char inport[3];
+  char msgtype[3];
+  char tobus[3];
+  char tomodule[3];
+  char modulecount[3];
+  char port[3];
+  char filename[11];
+  char data[200];
+  char longpress[3];
+};
+
+Msg emptymsg;
+Msg imessage;
+
 void setup(){
 for(int i = 0;i<16;i++){
     pinMode(ports[i], OUTPUT);
@@ -10,17 +31,48 @@ for(int i = 0;i<16;i++){
 Serial.begin(14400);
 extSerial.begin(14400);
 }
-   
+
 void loop(){
+
+    memset(serbuf,0, sizeof(serbuf));
+    imessage=emptymsg;
+    char inchar;
+    byte index=0;
+    String inst;
+    while (Serial.available() > 0)
+    {
+        inchar = Serial.read();
+      if (inchar == '!') {
+        inst= Serial.readStringUntil('#');
+        inst.toCharArray(serbuf, 250);
+        strcat(serbuf, '\0');
+        populateiMsg(0);
+        if (isthisforme()){
+          processMsg();
+      } else {
+
+
+      }
+
+
+        memset(serbuf,0, sizeof(serbuf));
+        imessage=emptymsg;
+        omessage=emptymsg;
+      }
+  }
+
+
+
+
   while (Serial.available()) {
-    
+
   int module = Serial.parseInt();
   int modcnt = Serial.parseInt();
   modcnt++;
   int port = Serial.parseInt();
-  int pstate = Serial.parseInt(); 
-  if (Serial.read() == '\n') { 
-    
+  int pstate = Serial.parseInt();
+  if (Serial.read() == '\n') {
+
     if (module == modcnt) {
     PortSwitch(port,pstate);
     }
@@ -35,10 +87,21 @@ void loop(){
      extSerial.print(pstate);
      extSerial.print('\n');
     // delay(5);
-    }  
-  }    
-  }   
+    }
+  }
+  }
 }
+
+
+bool isthisforme(){
+int tm = atoi(imessage.tomodule);
+int mc = atoi(imessage.modulecount);
+if ( tm == mc ){
+  return true;
+} else {
+  return false;
+};
+
 
 void PortSwitch(int port,int state){
   if (port != 33){
@@ -51,9 +114,9 @@ void PortSwitch(int port,int state){
     if (state == 0){
         digitalWrite(ports[port-1],HIGH);
     }
-  
+
   }
-  if (port == 33){    
+  if (port == 33){
     for (int i=0;i<16;i++){
            if (state == 1){
               digitalWrite(ports[i],LOW);
@@ -62,7 +125,6 @@ void PortSwitch(int port,int state){
               digitalWrite(ports[i],HIGH);
           }
     }
-    
+
   }
 }
-
